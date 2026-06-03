@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Verify OTP — SWC Election{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">📧</div>
+      <h1>Enter OTP</h1>
+      <p>We sent a 6-digit code to<br><strong>{{ email }}</strong></p>
+    </div>
+
+    <form method="POST" action="{{ url_for('verify_otp') }}" id="otpForm">
+      <div class="form-group">
+        <label for="otp">6-Digit OTP</label>
+        <input type="text" id="otp" name="otp"
+               maxlength="6" minlength="6"
+               placeholder="• • • • • •"
+               pattern="[0-9]{6}"
+               inputmode="numeric"
+               autocomplete="one-time-code"
+               class="otp-input"
+               required autofocus />
+      </div>
+
+      <!-- Countdown timer -->
+      <div class="otp-timer">
+        <span id="timerLabel">OTP expires in:</span>
+        <span id="countdown" class="countdown-display">05:00</span>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full">
+        ✅ Verify OTP
+      </button>
+    </form>
+
+    <div class="auth-divider"><span>Didn't receive it?</span></div>
+
+    <form method="POST" action="{{ url_for('resend_otp') }}">
+      <button type="submit" class="btn btn-outline btn-full" id="resendBtn" disabled>
+        🔁 Resend OTP <span id="resendCooldown">(wait 60s)</span>
+      </button>
+    </form>
+
+    <p class="auth-footer-link">
+      <a href="{{ url_for('index') }}">← Back to Login</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // OTP expiry countdown (5 minutes = 300 seconds)
+  let remaining = 300;
+  const countdownEl = document.getElementById('countdown');
+  const timerLabel  = document.getElementById('timerLabel');
+
+  const otpTimer = setInterval(() => {
+    remaining--;
+    const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+    const s = String(remaining % 60).padStart(2, '0');
+    countdownEl.textContent = `${m}:${s}`;
+
+    if (remaining <= 60) countdownEl.style.color = 'var(--danger)';
+    if (remaining <= 0) {
+      clearInterval(otpTimer);
+      countdownEl.textContent = 'EXPIRED';
+      timerLabel.textContent = '⚠️ OTP expired —';
+      document.getElementById('otpForm').querySelector('button').disabled = true;
+    }
+  }, 1000);
+
+  // Resend cooldown (60 seconds)
+  let resendRemaining = 60;
+  const resendBtn = document.getElementById('resendBtn');
+  const resendCd  = document.getElementById('resendCooldown');
+
+  const resendTimer = setInterval(() => {
+    resendRemaining--;
+    resendCd.textContent = `(wait ${resendRemaining}s)`;
+    if (resendRemaining <= 0) {
+      clearInterval(resendTimer);
+      resendBtn.disabled = false;
+      resendCd.textContent = '';
+    }
+  }, 1000);
+
+  // Auto-format OTP input (digits only)
+  document.getElementById('otp').addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 6);
+  });
+</script>
+{% endblock %}

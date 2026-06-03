@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Election Results — SWC Election{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div class="page-hero-inner">
+    <h1>📊 Election Results</h1>
+    <p>SWC Student Welfare Council Elections</p>
+  </div>
+</div>
+
+<div class="container">
+  {% if not available %}
+    <div class="results-pending">
+      <div class="pending-icon">🔒</div>
+      <h2>Results Not Yet Available</h2>
+      <p>{{ message }}</p>
+    </div>
+  {% else %}
+    <div class="results-header-bar">
+      <span class="results-live-badge">📢 OFFICIAL RESULTS</span>
+    </div>
+
+    {% for position, candidates in results_by_position.items() %}
+    <div class="results-section">
+      <div class="results-position-header">
+        <h2>
+          {% if position == 'President' %}👑
+          {% elif position == 'Vice President' %}🎖️
+          {% elif position == 'Secretary' %}📋
+          {% elif position == 'Treasurer' %}💰
+          {% else %}🏅{% endif %}
+          {{ position }}
+        </h2>
+      </div>
+
+      <!-- Winner Card -->
+      {% set winner = candidates[0] %}
+      <div class="winner-card">
+        <div class="winner-trophy">🏆</div>
+        <div class="winner-photo-wrap">
+          {% if winner.photo_base64 %}
+            <img src="data:image/jpeg;base64,{{ winner.photo_base64 }}"
+                 alt="{{ winner.name }}" class="winner-photo" />
+          {% else %}
+            <div class="winner-photo-placeholder">{{ winner.name[0] }}</div>
+          {% endif %}
+        </div>
+        <div class="winner-info">
+          <span class="winner-label">WINNER</span>
+          <h3>{{ winner.name }}</h3>
+          <p>{{ winner.department }}</p>
+          <div class="winner-votes">
+            <strong>{{ winner.vote_count or 0 }}</strong> votes
+          </div>
+        </div>
+      </div>
+
+      <!-- Full Results Table -->
+      <div class="results-table-wrap">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Candidate</th>
+              <th>Department</th>
+              <th>Votes</th>
+              <th>Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set total_votes = candidates | sum(attribute='vote_count') %}
+            {% for c in candidates %}
+            <tr class="{{ 'winner-row' if loop.first }}">
+              <td>
+                {% if loop.first %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+              </td>
+              <td>
+                <div class="results-candidate-cell">
+                  {% if c.photo_base64 %}
+                    <img src="data:image/jpeg;base64,{{ c.photo_base64 }}"
+                         alt="{{ c.name }}" class="results-thumb" />
+                  {% else %}
+                    <div class="results-thumb-placeholder">{{ c.name[0] }}</div>
+                  {% endif %}
+                  <span>{{ c.name }}</span>
+                  {% if loop.first %}<span class="badge badge-gold">Winner</span>{% endif %}
+                </div>
+              </td>
+              <td>{{ c.department }}</td>
+              <td><strong>{{ c.vote_count or 0 }}</strong></td>
+              <td>
+                {% if total_votes > 0 %}
+                  {% set pct = ((c.vote_count or 0) / total_votes * 100) | round(1) %}
+                  <div class="vote-bar-wrap">
+                    <div class="vote-bar" style="width: {{ pct }}%"></div>
+                    <span>{{ pct }}%</span>
+                  </div>
+                {% else %}
+                  0%
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Election Settings — Admin{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="sidebar-brand">⚙️ Admin Panel</div>
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link">📊 Dashboard</a>
+      <a href="{{ url_for('admin_students') }}" class="sidebar-link">👥 Students</a>
+      <a href="{{ url_for('admin_candidates') }}" class="sidebar-link">🏅 Candidates</a>
+      <a href="{{ url_for('admin_settings') }}" class="sidebar-link active">⚙️ Settings</a>
+      <a href="{{ url_for('admin_monitor') }}" class="sidebar-link">📡 Live Monitor</a>
+      <a href="{{ url_for('admin_logout') }}" class="sidebar-link sidebar-logout">🚪 Logout</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <h1>⚙️ Election Settings</h1>
+    </div>
+
+    <div class="admin-card settings-card">
+
+      <!-- Current Status Banner -->
+      <div class="settings-status-banner {{ 'banner-active' if election_active else 'banner-inactive' }}" id="statusBanner">
+        <span class="banner-dot"></span>
+        <strong id="bannerText">Election is currently
+          {{ 'ACTIVE — voting is open' if election_active else 'INACTIVE — voting is closed' }}
+        </strong>
+      </div>
+
+      <form method="POST" action="{{ url_for('admin_settings') }}" id="settingsForm">
+
+        <div class="settings-section">
+          <h3>📅 Election Schedule (Date &amp; Time)</h3>
+          <div class="settings-grid">
+            <div class="form-group">
+              <label for="start_date">Election Start — Date &amp; Time</label>
+              <input type="datetime-local" id="start_date" name="start_date"
+                     value="{{ settings.start_date[:16] if settings and settings.start_date else '' }}" />
+              <small class="form-hint">Voting opens automatically at this exact date and time.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="end_date">Election End — Date &amp; Time</label>
+              <input type="datetime-local" id="end_date" name="end_date"
+                     value="{{ settings.end_date[:16] if settings and settings.end_date else '' }}" />
+              <small class="form-hint">Voting closes automatically at this exact date and time.</small>
+            </div>
+
+            <div class="form-group">
+              <label for="result_date">Result Announcement Date &amp; Time</label>
+              <input type="datetime-local" id="result_date" name="result_date"
+                     value="{{ settings.result_date[:16] if settings and settings.result_date else '' }}" />
+              <small class="form-hint">Shown to students. Use "Publish Results" below to actually release results.</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h3>🔌 Manual Override</h3>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <strong>Enable Voting (Manual)</strong>
+              <p>If no start/end time is set, use this toggle to manually open or close voting.
+                 When a schedule is set, the schedule takes priority.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" name="is_active" id="is_active"
+                     {{ 'checked' if settings and settings.is_active else '' }} />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Timeline Preview -->
+        <div class="settings-section">
+          <h3>📋 Timeline Preview</h3>
+          <div class="timeline" id="timeline">
+            <div class="timeline-item" id="tl_start">
+              <div class="tl-dot tl-blue"></div>
+              <div class="tl-content">
+                <strong>Voting Opens</strong>
+                <span id="tl_start_date">{{ settings.start_date if settings and settings.start_date else 'Not set' }}</span>
+              </div>
+            </div>
+            <div class="timeline-item" id="tl_end">
+              <div class="tl-dot tl-red"></div>
+              <div class="tl-content">
+                <strong>Voting Closes</strong>
+                <span id="tl_end_date">{{ settings.end_date if settings and settings.end_date else 'Not set' }}</span>
+              </div>
+            </div>
+            <div class="timeline-item" id="tl_result">
+              <div class="tl-dot tl-gold"></div>
+              <div class="tl-content">
+                <strong>Results Announced</strong>
+                <span id="tl_result_date">{{ settings.result_date if settings and settings.result_date else 'Not set' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-actions">
+          <button type="submit" class="btn btn-primary btn-lg">
+            💾 Save Settings
+          </button>
+          <p class="settings-note">
+            ⚠️ Saving new dates will <strong>unpublish</strong> any previously published results.
+            You must re-publish after the election ends.
+          </p>
+        </div>
+      </form>
+    </div>
+
+    <!-- PUBLISH RESULTS SECTION -->
+    <div class="admin-card" style="margin-top:1.5rem; border-left: 4px solid {{ '#22c55e' if settings and settings.results_published else '#f59e0b' }};">
+      <h3>📢 Results Publication</h3>
+      {% if settings and settings.results_published %}
+        <div style="display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:.5rem;">
+          <span class="badge badge-success" style="font-size:1rem; padding:.5rem 1rem;">
+            ✅ Results are PUBLISHED — students can see them
+          </span>
+          <form method="POST" action="{{ url_for('admin_publish_results') }}" style="display:inline;">
+            <input type="hidden" name="unpublish" value="1" />
+            <button class="btn btn-outline btn-sm"
+                    onclick="return confirm('Unpublish results? Students will no longer see them.')">
+              🔒 Unpublish Results
+            </button>
+          </form>
+        </div>
+      {% elif election_ended %}
+        <p style="margin:.5rem 0 1rem;">The election has ended. Publish results to make them visible to all students.</p>
+        <form method="POST" action="{{ url_for('admin_publish_results') }}">
+          <button class="btn btn-primary"
+                  onclick="return confirm('Publish election results? All students will be able to see them.')">
+            📢 Publish Results Now
+          </button>
+        </form>
+      {% else %}
+        <p style="color:#6b7280; margin:.5rem 0;">
+          The <strong>Publish Results</strong> button will appear here once the election end time has passed.<br>
+          <em>Students cannot see results until you click Publish.</em>
+        </p>
+        {% if settings and settings.end_date %}
+          <p><strong>Election ends:</strong> {{ settings.end_date[:16] | replace('T', ' ') }}</p>
+        {% endif %}
+      {% endif %}
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="admin-card danger-zone" style="margin-top:1.5rem;">
+      <h3>⚠️ Danger Zone</h3>
+      <div class="danger-actions">
+        <div class="danger-item">
+          <div>
+           <form method="POST"
+            action="{{ url_for('admin_reset_votes') }}"
+            style="display:inline;">
+
+          <button
+            type="submit"
+            class="btn btn-danger"
+            onclick="return confirm('DANGER: This will delete ALL votes. Are you absolutely sure?');">
+
+            🗑️ Reset Votes
+
+          </button>
+
+          </form>
+          <form method="POST"
+      action="{{ url_for('admin_clear_candidates') }}"
+      style="display:inline; margin-left:10px;">
+
+    <button
+        type="submit"
+        class="btn btn-danger"
+        onclick="return confirm('WARNING: This will remove ALL candidates. Continue?');">
+
+        ❌ Clear Candidates
+
+    </button>
+
+</form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function syncTimeline() {
+    const s = document.getElementById('start_date').value.replace('T', ' ');
+    const e = document.getElementById('end_date').value.replace('T', ' ');
+    const r = document.getElementById('result_date').value;
+    document.getElementById('tl_start_date').textContent  = s || 'Not set';
+    document.getElementById('tl_end_date').textContent    = e || 'Not set';
+    document.getElementById('tl_result_date').textContent = r || 'Not set';
+  }
+
+  ['start_date', 'end_date', 'result_date'].forEach(id =>
+    document.getElementById(id).addEventListener('change', syncTimeline)
+  );
+
+  const toggleInput = document.getElementById('is_active');
+  const banner      = document.getElementById('statusBanner');
+  const bannerText  = document.getElementById('bannerText');
+
+  toggleInput.addEventListener('change', function () {
+    if (this.checked) {
+      banner.className = 'settings-status-banner banner-active';
+      bannerText.textContent = 'Election is currently ACTIVE — voting is open';
+    } else {
+      banner.className = 'settings-status-banner banner-inactive';
+      bannerText.textContent = 'Election is currently INACTIVE — voting is closed';
+    }
+  });
+</script>
+{% endblock %}

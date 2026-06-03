@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Vote Submitted — SWC Election{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card thankyou-card">
+    <div class="success-animation">
+      <div class="success-circle">
+        <span class="success-checkmark">✓</span>
+      </div>
+    </div>
+
+    <h1 class="thankyou-title">Vote Submitted!</h1>
+    <p class="thankyou-subtitle">
+      Thank you, <strong>{{ student_name }}</strong>!<br>
+      Your vote has been recorded securely.
+    </p>
+
+    <div class="thankyou-details">
+      <div class="detail-item">
+        <span class="detail-icon">🔐</span>
+        <span>Your vote is encrypted and anonymous</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-icon">✅</span>
+        <span>Voting session marked as complete</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-icon">🏛️</span>
+        <span>Every vote shapes our student council</span>
+      </div>
+    </div>
+
+    <div class="thankyou-actions">
+      <a href="{{ url_for('results') }}" class="btn btn-primary">
+        📊 View Results
+      </a>
+      <a href="{{ url_for('logout') }}" class="btn btn-outline">
+        🚪 Logout
+      </a>
+    </div>
+
+    <p class="thankyou-footer">
+      Results are published on the announced date.
+      Thank you for participating in democracy! 🗳️
+    </p>
+  </div>
+</div>
+{% endblock %}

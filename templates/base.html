@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}SWC Election Platform{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- ── NAVBAR ────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a class="navbar-brand" href="/">
+      <span class="brand-icon">🏛️</span>
+      <div>
+        <span class="brand-title">SWC Election</span>
+        <span class="brand-sub">Student Welfare Council</span>
+      </div>
+    </a>
+
+    <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+
+    <ul class="nav-links" id="navLinks">
+      {% if session.get('student_roll') %}
+        <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li><a href="{{ url_for('results') }}">Results</a></li>
+        <li>
+          <a href="{{ url_for('logout') }}" class="btn-nav-logout">
+            Logout ({{ session.get('student_name','') }})
+          </a>
+        </li>
+      {% elif session.get('admin_logged_in') %}
+        <li><a href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+        <li><a href="{{ url_for('admin_students') }}">Students</a></li>
+        <li><a href="{{ url_for('admin_candidates') }}">Candidates</a></li>
+        <li><a href="{{ url_for('admin_settings') }}">Settings</a></li>
+        <li><a href="{{ url_for('admin_monitor') }}">Monitor</a></li>
+        <li><a href="{{ url_for('admin_logout') }}" class="btn-nav-logout">Logout</a></li>
+      {% else %}
+        <li><a href="{{ url_for('index') }}">Login</a></li>
+        <li><a href="{{ url_for('signup') }}">Register</a></li>
+        <li><a href="{{ url_for('results') }}">Results</a></li>
+        <li><a href="{{ url_for('admin_login') }}" class="btn-nav-admin">Admin</a></li>
+      {% endif %}
+    </ul>
+  </div>
+</nav>
+
+<!-- ── FLASH MESSAGES ────────────────────────────────────────────── -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-container">
+      {% for category, message in messages %}
+        <div class="flash flash-{{ category }}">
+          <span class="flash-icon">
+            {% if category == 'success' %}✅{% elif category == 'error' %}❌{% else %}ℹ️{% endif %}
+          </span>
+          <span>{{ message }}</span>
+          <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- ── PAGE CONTENT ──────────────────────────────────────────────── -->
+<main class="main-content">
+  {% block content %}{% endblock %}
+</main>
+
+<!-- ── FOOTER ────────────────────────────────────────────────────── -->
+<footer class="footer">
+  <div class="footer-inner">
+    <p>🏛️ <strong>SWC Election Platform</strong> &nbsp;|&nbsp; Student Welfare Council</p>
+    <p class="footer-sub">Secure · Transparent · Democratic</p>
+  </div>
+</footer>
+
+<script>
+  // Hamburger menu toggle
+  const _ham = document.getElementById('hamburger');
+  const _nav = document.getElementById('navLinks');
+  if (_ham && _nav) {
+    _ham.addEventListener('click', function () {
+      _nav.classList.toggle('open');
+      this.classList.toggle('active');
+    });
+    _nav.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        _nav.classList.remove('open');
+        _ham.classList.remove('active');
+      });
+    });
+    document.addEventListener('click', function(e) {
+      if (!_ham.contains(e.target) && !_nav.contains(e.target)) {
+        _nav.classList.remove('open');
+        _ham.classList.remove('active');
+      }
+    });
+  }
+  // Auto-dismiss flash after 6s
+  setTimeout(() => {
+    document.querySelectorAll('.flash').forEach(el => {
+      el.style.transition = 'opacity .4s';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 400);
+    });
+  }, 6000);
+</script>
+<script src="{{ url_for('static', filename='js/validation.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

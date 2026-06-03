@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+{% block title %}Candidate Management — Admin{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="sidebar-brand">⚙️ Admin Panel</div>
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link">📊 Dashboard</a>
+      <a href="{{ url_for('admin_students') }}" class="sidebar-link">👥 Students</a>
+      <a href="{{ url_for('admin_candidates') }}" class="sidebar-link active">🏅 Candidates</a>
+      <a href="{{ url_for('admin_settings') }}" class="sidebar-link">⚙️ Settings</a>
+      <a href="{{ url_for('admin_monitor') }}" class="sidebar-link">📡 Live Monitor</a>
+      <a href="{{ url_for('admin_logout') }}" class="sidebar-link sidebar-logout">🚪 Logout</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <h1>🏅 Candidate Management</h1>
+      <button class="btn btn-primary" onclick="openModal('addCandidateModal')">
+        ➕ Add Candidate
+      </button>
+    </div>
+
+    <!-- Candidates grouped by Position -->
+    {% if candidates_by_position %}
+      {% for position, pos_candidates in candidates_by_position.items() %}
+      <div class="position-section" style="margin-bottom:2.5rem;">
+
+        <!-- Position Header -->
+        <div class="position-section-header" style="
+            display:flex; align-items:center; gap:0.75rem;
+            padding:0.75rem 1.25rem;
+            background: linear-gradient(135deg,#1e3a5f,#2563eb);
+            border-radius:12px 12px 0 0;
+            color:#fff; margin-bottom:0;">
+          <span style="font-size:1.4rem;">
+            {% if position == 'President' %}👑
+            {% elif position == 'Vice President' %}🎖️
+            {% elif position == 'Secretary' %}📋
+            {% elif position == 'Treasurer' %}💰
+            {% elif position == 'Sports Secretary' %}⚽
+            {% elif position == 'Cultural Secretary' %}🎭
+            {% else %}🏅{% endif %}
+          </span>
+          <h2 style="margin:0; font-size:1.15rem; font-weight:700;">{{ position }}</h2>
+          <span style="margin-left:auto; background:rgba(255,255,255,0.2);
+                       padding:0.2rem 0.7rem; border-radius:999px; font-size:0.8rem; font-weight:600;">
+            {{ pos_candidates | length }} candidate{{ 's' if pos_candidates | length != 1 }}
+          </span>
+        </div>
+
+        <!-- Candidates for this position -->
+        <div class="candidates-admin-grid" style="
+            border:1px solid #e2e8f0; border-top:none;
+            border-radius:0 0 12px 12px; padding:1.25rem; background:#fff;">
+          {% for c in pos_candidates %}
+          <div class="candidate-admin-card">
+            <div class="cand-admin-photo-wrap">
+              {% if c.photo_base64 %}
+                <img src="data:image/jpeg;base64,{{ c.photo_base64 }}"
+                     alt="{{ c.name }}" class="cand-admin-photo" />
+              {% else %}
+                <div class="cand-admin-photo-placeholder">{{ c.name[0] }}</div>
+              {% endif %}
+            </div>
+            <div class="cand-admin-info">
+              <h3>{{ c.name }}</h3>
+              <p class="text-sm">📌 {{ c.roll_number or '—' }}</p>
+              <p class="text-sm">🏫 {{ c.department or '—' }}</p>
+              <p class="text-sm">🗳️ <strong>{{ c.vote_count or 0 }}</strong> votes</p>
+              {% if c.manifesto %}
+                <p class="cand-manifesto-preview">
+                  {{ c.manifesto[:80] }}{% if c.manifesto|length > 80 %}…{% endif %}
+                </p>
+              {% endif %}
+            </div>
+            <div class="cand-admin-actions">
+              <button class="btn btn-sm btn-outline"
+                      onclick="openEditCandidateModal({{ c | tojson }})">✏️ Edit</button>
+              <form method="POST" action="{{ url_for('admin_delete_candidate') }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('Delete candidate {{ c.name }}?');">
+                <input type="hidden" name="candidate_id" value="{{ c.id }}" />
+                <button class="btn btn-sm btn-danger">🗑️ Delete</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🏅</div>
+      <h2>No Candidates Yet</h2>
+      <p>Click "Add Candidate" to nominate students for positions.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── ADD CANDIDATE MODAL ─────────────────────────────────────────── -->
+<div id="addCandidateModal" class="modal-overlay" style="display:none;">
+  <div class="modal modal-large">
+    <div class="modal-header">
+      <h2>🏅 Add Candidate</h2>
+      <button class="modal-close" onclick="closeModal('addCandidateModal')">✕</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_add_candidate') }}" enctype="multipart/form-data" id="addCandidateForm">
+
+     <!-- Student Picker — required, no manual entry allowed -->
+      <div class="info-box info-box-blue" style="margin-bottom:1rem;">
+        <div class="info-box-icon">💡</div>
+        <div>You must select an approved student. Details are filled automatically.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="add_student_id">Select Approved Student *</label>
+        <select name="student_id" id="add_student_id" required onchange="autoFillStudent(this)">
+          <option value="">— Select a student —</option>
+          {% for s in students %}
+            <option value="{{ s.id }}"
+                    data-name="{{ s.name }}"
+                    data-roll="{{ s.roll_number }}"
+                    data-dept="{{ s.department or '' }}">
+              {{ s.name }} ({{ s.roll_number }}) — {{ s.department or 'N/A' }}
+            </option>
+          {% endfor %}
+        </select>
+      </div> 
+
+      <!-- Auto-filled read-only fields -->
+      <div class="modal-form-grid">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" name="name" id="add_cand_name" readonly
+                 style="background:#f1f5f9; cursor:not-allowed;" placeholder="Auto-filled from student" />
+        </div>
+        <div class="form-group">
+          <label>Roll Number</label>
+          <input type="text" name="roll_number" id="add_cand_roll" readonly
+                 style="background:#f1f5f9; cursor:not-allowed;" placeholder="Auto-filled from student" />
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <input type="text" id="add_cand_dept_display" readonly
+                 style="background:#f1f5f9; cursor:not-allowed;" placeholder="Auto-filled from student" />
+          <input type="hidden" name="department" id="add_cand_dept" />
+        </div>
+        <div class="form-group">
+          <label>Position *</label>
+          <select name="position" required>
+            <option value="">— Select Position —</option>
+            <option value="President">👑 President</option>
+            <option value="Vice President">🎖️ Vice President</option>
+            <option value="Secretary">📋 Secretary</option>
+            <option value="Treasurer">💰 Treasurer</option>
+            <option value="Sports Secretary">⚽ Sports Secretary</option>
+            <option value="Cultural Secretary">🎭 Cultural Secretary</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column: 1/-1;">
+          <label>Manifesto</label>
+          <textarea name="manifesto" rows="3" placeholder="Candidate's manifesto / key promises..."></textarea>
+        </div>
+        <div class="form-group" style="grid-column: 1/-1;">
+          <label>Candidate Photo (leave blank to use student's registered photo)</label>
+          <input type="file" name="photo" accept="image/jpeg,image/png" />
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">💾 Add Candidate</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('addCandidateModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── EDIT CANDIDATE MODAL ─────────────────────────────────────────── -->
+<div id="editCandidateModal" class="modal-overlay" style="display:none;">
+  <div class="modal modal-large">
+    <div class="modal-header">
+      <h2>✏️ Edit Candidate</h2>
+      <button class="modal-close" onclick="closeModal('editCandidateModal')">✕</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin_edit_candidate') }}" enctype="multipart/form-data">
+      <input type="hidden" name="candidate_id" id="edit_cand_id" />
+      <div class="modal-form-grid">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" name="name" id="edit_cand_name" required />
+        </div>
+        <div class="form-group">
+          <label>Roll Number</label>
+          <input type="text" name="roll_number" id="edit_cand_roll" />
+        </div>
+        <div class="form-group">
+          <label>Department</label>
+          <select name="department" id="edit_cand_dept">
+            {% for dept in ['Computer Science','Information Technology','Electronics & Communication',
+                            'Electrical Engineering','Mechanical Engineering','Civil Engineering',
+                            'Chemical Engineering','Biotechnology','Physics','Mathematics','MBA','MCA','Other'] %}
+              <option value="{{ dept }}">{{ dept }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Position *</label>
+          <select name="position" id="edit_cand_pos" required>
+            <option value="President">👑 President</option>
+            <option value="Vice President">🎖️ Vice President</option>
+            <option value="Secretary">📋 Secretary</option>
+            <option value="Treasurer">💰 Treasurer</option>
+            <option value="Sports Secretary">⚽ Sports Secretary</option>
+            <option value="Cultural Secretary">🎭 Cultural Secretary</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column: 1/-1;">
+          <label>Manifesto</label>
+          <textarea name="manifesto" id="edit_cand_manifesto" rows="3"></textarea>
+        </div>
+        <div class="form-group" style="grid-column: 1/-1;">
+          <label>New Photo (leave blank to keep existing)</label>
+          <input type="file" name="photo" accept="image/jpeg,image/png" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('editCandidateModal')">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.style.display = 'none';
+  });
+});
+
+function autoFillStudent(select) {
+  const opt = select.options[select.selectedIndex];
+  if (!opt.value) {
+    document.getElementById('add_cand_name').value = '';
+    document.getElementById('add_cand_roll').value = '';
+    document.getElementById('add_cand_dept_display').value = '';
+    document.getElementById('add_cand_dept').value = '';
+    return;
+  }
+  document.getElementById('add_cand_name').value         = opt.dataset.name || '';
+  document.getElementById('add_cand_roll').value         = opt.dataset.roll || '';
+  document.getElementById('add_cand_dept_display').value = opt.dataset.dept || '';
+  document.getElementById('add_cand_dept').value         = opt.dataset.dept || '';
+}
+
+function openEditCandidateModal(c) {
+  document.getElementById('edit_cand_id').value       = c.id;
+  document.getElementById('edit_cand_name').value     = c.name || '';
+  document.getElementById('edit_cand_roll').value     = c.roll_number || '';
+  document.getElementById('edit_cand_dept').value     = c.department || '';
+  document.getElementById('edit_cand_pos').value      = c.position || '';
+  document.getElementById('edit_cand_manifesto').value = c.manifesto || '';
+  openModal('editCandidateModal');
+}
+</script>
+{% endblock %}

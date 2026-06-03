@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — SWC Election{% endblock %}
+
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="sidebar-brand">⚙️ Admin Panel</div>
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link active">📊 Dashboard</a>
+      <a href="{{ url_for('admin_students') }}" class="sidebar-link">
+        👥 Students
+        {% if pending_count > 0 %}
+          <span class="sidebar-badge">{{ pending_count }}</span>
+        {% endif %}
+      </a>
+      <a href="{{ url_for('admin_candidates') }}" class="sidebar-link">🏅 Candidates</a>
+      <a href="{{ url_for('admin_settings') }}" class="sidebar-link">⚙️ Settings</a>
+      <a href="{{ url_for('admin_monitor') }}" class="sidebar-link">📡 Live Monitor</a>
+      <a href="{{ url_for('results') }}" class="sidebar-link">📊 Results</a>
+      <a href="{{ url_for('admin_logout') }}" class="sidebar-link sidebar-logout">🚪 Logout</a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <h1>Dashboard</h1>
+      <span class="admin-user">👤 {{ session.admin_username }}</span>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card stat-blue">
+        <div class="stat-icon">👥</div>
+        <div class="stat-body">
+          <div class="stat-value">{{ total_students }}</div>
+          <div class="stat-label">Registered Students</div>
+        </div>
+      </div>
+      <div class="stat-card stat-green">
+        <div class="stat-icon">🗳️</div>
+        <div class="stat-body">
+          <div class="stat-value">{{ voted_count }}</div>
+          <div class="stat-label">Votes Cast</div>
+        </div>
+      </div>
+      <div class="stat-card stat-gold">
+        <div class="stat-icon">📈</div>
+        <div class="stat-body">
+          <div class="stat-value">{{ turnout }}%</div>
+          <div class="stat-label">Voter Turnout</div>
+        </div>
+      </div>
+      <div class="stat-card {{ 'stat-green' if election_active else 'stat-red' }}">
+        <div class="stat-icon">{{ '🟢' if election_active else '🔴' }}</div>
+        <div class="stat-body">
+          <div class="stat-value">{{ 'ACTIVE' if election_active else 'CLOSED' }}</div>
+          <div class="stat-label">Election Status</div>
+        </div>
+      </div>
+      {% if pending_count > 0 %}
+      <div class="stat-card stat-orange">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-body">
+          <div class="stat-value">{{ pending_count }}</div>
+          <div class="stat-label">
+            <a href="{{ url_for('admin_students') }}" style="color:inherit;">Pending Approvals</a>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Turnout Progress Bar -->
+    <div class="admin-card">
+      <h2>Voter Turnout</h2>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" style="width: {{ turnout }}%;">{{ turnout }}%</div>
+      </div>
+      <p class="progress-note">{{ voted_count }} of {{ total_students }} approved students have voted.</p>
+    </div>
+
+    <!-- Bar Chart: Votes per Candidate -->
+    {% if candidates %}
+    <div class="admin-card">
+      <h2>📊 Vote Distribution</h2>
+      <div style="position:relative; max-height:400px;">
+        <canvas id="votesChart"></canvas>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="admin-card">
+      <h2>Quick Actions</h2>
+      <div class="quick-actions">
+        <a href="{{ url_for('admin_students') }}" class="quick-action-btn">
+          <span>👥</span> Manage Students
+        </a>
+        <a href="{{ url_for('admin_candidates') }}" class="quick-action-btn">
+          <span>🏅</span> Add Candidates
+        </a>
+        <a href="{{ url_for('admin_settings') }}" class="quick-action-btn">
+          <span>⚙️</span> Election Settings
+        </a>
+        <a href="{{ url_for('admin_monitor') }}" class="quick-action-btn">
+          <span>📡</span> Live Monitor
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if candidates %}
+<script>
+const candidates = {{ candidates | tojson }};
+const labels = candidates.map(c => `${c.name} (${c.position})`);
+const data   = candidates.map(c => c.vote_count || 0);
+const colors = candidates.map((_, i) => `hsl(${(i * 67) % 360}, 70%, 55%)`);
+
+new Chart(document.getElementById('votesChart'), {
+  type: 'bar',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Votes',
+      data,
+      backgroundColor: colors,
+      borderColor: colors.map(c => c.replace('55%', '40%')),
+      borderWidth: 2,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y} vote(s)` } }
+    },
+    scales: {
+      y: { beginAtZero: true, ticks: { stepSize: 1 } }
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

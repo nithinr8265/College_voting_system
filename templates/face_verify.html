@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Face Verification — SWC Election{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card wide-card face-card">
+    <div class="auth-header">
+      <div class="auth-icon">🤳</div>
+      <h1>Face Verification</h1>
+      <p>Look directly at the camera and click <strong>Capture & Verify</strong><br>
+         to confirm your identity before voting.</p>
+    </div>
+
+    <!-- Camera Feed -->
+    <div class="webcam-container">
+      <div class="webcam-wrapper" id="webcamWrapper">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="canvas" style="display:none;"></canvas>
+        <div class="webcam-overlay" id="webcamOverlay">
+          <div class="face-guide-circle"></div>
+        </div>
+      </div>
+
+      <!-- Status messages -->
+      <div id="camError" class="cam-error" style="display:none;">
+        <span class="cam-error-icon">📷</span>
+        <p id="camErrorMsg">Camera not available. Please allow camera access and reload.</p>
+      </div>
+
+      <div id="statusBox" class="verify-status" style="display:none;"></div>
+    </div>
+
+    <!-- Controls -->
+    <div class="webcam-controls">
+      <button id="captureBtn" class="btn btn-primary btn-lg" disabled>
+        <span id="captureBtnText">📷 Capture & Verify</span>
+        <span id="captureSpinner" class="spinner" style="display:none;"></span>
+      </button>
+    </div>
+
+    <div class="verify-tips">
+      <h4>Tips for best results:</h4>
+      <ul>
+        <li>✅ Good lighting — face a window or lamp</li>
+        <li>✅ Remove glasses or hat if needed</li>
+        <li>✅ Look straight at the camera</li>
+        <li>✅ Ensure your full face is visible</li>
+      </ul>
+    </div>
+
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-full" style="margin-top:1rem;">
+      ← Back to Dashboard
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/webcam.js') }}"></script>
+{% endblock %}

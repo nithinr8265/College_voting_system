@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — SWC Election{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <div class="page-hero-inner">
+    <h1>Welcome, {{ student.name }} 👋</h1>
+    <p>Roll No: {{ student.roll_number }} &nbsp;|&nbsp; {{ student.department }}</p>
+    {% if student.has_voted %}
+      <span class="badge badge-success badge-lg">✅ You have voted</span>
+    {% else %}
+      <span class="badge badge-warning badge-lg">🗳️ You haven't voted yet</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Election Status Banner -->
+  {% if settings %}
+    {% if election_active %}
+      <div class="alert alert-success">
+        🟢 <strong>Voting is OPEN</strong>
+        {% if settings.end_date %}
+          &nbsp;— Closes on {{ settings.end_date }}
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="alert alert-warning">
+        🔴 <strong>Voting is currently CLOSED.</strong> Check back later.
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <!-- Vote Button -->
+  {% if not student.has_voted %}
+    {% if election_active %}
+      <div class="vote-action-bar">
+        <a href="{{ url_for('face_verify_page') }}" class="btn btn-success btn-lg">
+          🗳️ Proceed to Vote
+        </a>
+        <p>Face verification required before voting</p>
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="vote-action-bar">
+      <span class="btn btn-disabled btn-lg">✅ Vote Already Cast</span>
+      <p>Thank you for participating in the election!</p>
+    </div>
+  {% endif %}
+
+  <!-- Candidates by Position -->
+  {% if candidates_by_position %}
+    {% for position, candidates in candidates_by_position.items() %}
+      <section class="position-section">
+        <div class="position-header">
+          <h2>
+            {% if position == 'President' %}👑
+            {% elif position == 'Vice President' %}🎖️
+            {% elif position == 'Secretary' %}📋
+            {% elif position == 'Treasurer' %}💰
+            {% else %}🏅{% endif %}
+            {{ position }}
+          </h2>
+          <span class="candidate-count">{{ candidates|length }} candidate{% if candidates|length != 1 %}s{% endif %}</span>
+        </div>
+
+        <div class="candidates-grid">
+          {% for c in candidates %}
+          <div class="candidate-card">
+            <div class="candidate-photo-wrap">
+              {% if c.photo_base64 %}
+                <img src="data:image/jpeg;base64,{{ c.photo_base64 }}"
+                     alt="{{ c.name }}" class="candidate-photo" />
+              {% else %}
+                <div class="candidate-photo-placeholder">{{ c.name[0] }}</div>
+              {% endif %}
+            </div>
+            <div class="candidate-info">
+              <span class="position-badge">{{ c.position }}</span>
+              <h3 class="candidate-name">{{ c.name }}</h3>
+              <p class="candidate-dept">🏫 {{ c.department }}</p>
+              <p class="candidate-roll">📌 {{ c.roll_number }}</p>
+              {% if c.manifesto %}
+                <details class="manifesto-details">
+                  <summary>📄 View Manifesto</summary>
+                  <p class="manifesto-text">{{ c.manifesto }}</p>
+                </details>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🗳️</div>
+      <h2>No Candidates Yet</h2>
+      <p>Candidates will appear here once the election begins.</p>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

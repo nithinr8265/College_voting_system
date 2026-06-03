@@ -1,0 +1,11 @@
+-- Delete all votes
+DELETE FROM votes;
+
+-- Reset candidate vote counts
+UPDATE candidates
+SET vote_count = 0;
+
+-- Reset student voting status
+UPDATE students
+SET has_voted = FALSE,
+    voted_at = NULL;

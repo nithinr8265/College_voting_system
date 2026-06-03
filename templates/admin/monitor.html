@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Live Monitor — Admin{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+  <aside class="admin-sidebar">
+    <div class="sidebar-brand">⚙️ Admin Panel</div>
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('admin_dashboard') }}" class="sidebar-link">📊 Dashboard</a>
+      <a href="{{ url_for('admin_students') }}" class="sidebar-link">👥 Students</a>
+      <a href="{{ url_for('admin_candidates') }}" class="sidebar-link">🏅 Candidates</a>
+      <a href="{{ url_for('admin_settings') }}" class="sidebar-link">⚙️ Settings</a>
+      <a href="{{ url_for('admin_monitor') }}" class="sidebar-link active">📡 Live Monitor</a>
+      <a href="{{ url_for('admin_logout') }}" class="sidebar-link sidebar-logout">🚪 Logout</a>
+    </nav>
+  </aside>
+
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <h1>📡 Live Voter Monitor</h1>
+      <div class="monitor-controls">
+        <span class="live-indicator">
+          <span class="live-dot"></span> Auto-refreshing every 30s
+        </span>
+        <button class="btn btn-outline btn-sm" onclick="location.reload()">🔄 Refresh Now</button>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="monitor-summary">
+      <div class="monitor-stat voted">
+        <div class="monitor-stat-val">{{ voted_count }}</div>
+        <div class="monitor-stat-lbl">Voted ✅</div>
+      </div>
+      <div class="monitor-stat not-voted">
+        <div class="monitor-stat-val">{{ total - voted_count }}</div>
+        <div class="monitor-stat-lbl">Not Voted ⏳</div>
+      </div>
+      <div class="monitor-stat total">
+        <div class="monitor-stat-val">{{ total }}</div>
+        <div class="monitor-stat-lbl">Total Students</div>
+      </div>
+      <div class="monitor-stat turnout">
+        <div class="monitor-stat-val">
+          {% if total > 0 %}{{ (voted_count / total * 100) | round(1) }}%{% else %}0%{% endif %}
+        </div>
+        <div class="monitor-stat-lbl">Turnout</div>
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="admin-card">
+      <div class="monitor-progress-label">
+        <span>Voter Turnout</span>
+        <span>{{ voted_count }}/{{ total }}</span>
+      </div>
+      <div class="progress-bar-wrap large">
+        <div class="progress-bar"
+             style="width: {{ (voted_count / total * 100) | round(1) if total > 0 else 0 }}%;">
+          {{ (voted_count / total * 100) | round(1) if total > 0 else 0 }}%
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="admin-card table-card">
+      <div class="monitor-filter-bar">
+        <input type="text" id="searchInput" placeholder="🔍 Search by name or roll number..."
+               class="monitor-search" onkeyup="filterTable()" />
+        <div class="tab-bar" style="margin:0;">
+          <button class="tab-btn active" onclick="filterStatus('all', this)">All</button>
+          <button class="tab-btn" onclick="filterStatus('voted', this)">✅ Voted</button>
+          <button class="tab-btn" onclick="filterStatus('pending', this)">⏳ Pending</button>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table class="admin-table" id="monitorTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Photo</th>
+              <th>Name</th>
+              <th>Roll No</th>
+              <th>Department</th>
+              <th>Admission Yr</th>
+              <th>Entry Yr</th>
+              <th>Status</th>
+              <th>Voted At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in students %}
+            <tr class="monitor-row" data-voted="{{ 'voted' if s.has_voted else 'pending' }}"
+                data-search="{{ s.name | lower }} {{ s.roll_number | lower }}">
+              <td>{{ loop.index }}</td>
+              <td>
+                {% if s.photo_base64 %}
+                  <img src="data:image/jpeg;base64,{{ s.photo_base64 }}"
+                       class="table-avatar" alt="{{ s.name }}" />
+                {% else %}
+                  <div class="table-avatar-placeholder">{{ s.name[0] if s.name else '?' }}</div>
+                {% endif %}
+              </td>
+              <td><strong>{{ s.name }}</strong></td>
+              <td><code>{{ s.roll_number }}</code></td>
+              <td>{{ s.department or '—' }}</td>
+              <td>{{ s.admission_year or '—' }}</td>
+              <td>
+                {% if s.entry_year == 1 %}1st
+                {% elif s.entry_year == 2 %}2nd (Lateral)
+                {% elif s.entry_year == 3 %}3rd (Lateral)
+                {% else %}—{% endif %}
+              </td>
+              <td>
+                {% if s.has_voted %}
+                  <span class="badge badge-success voted-badge">✅ Voted</span>
+                {% else %}
+                  <span class="badge badge-danger voted-badge">⏳ Pending</span>
+                {% endif %}
+              </td>
+              <td class="text-sm">
+                {% if s.voted_at %}
+                  {{ s.voted_at[:16].replace('T', ' ') }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="9" class="empty-table">No approved students found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-footer">
+        Showing <span id="visibleCount">{{ students | length }}</span> of {{ students | length }} students.
+        Last updated: <span id="lastUpdated"></span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Show last updated time
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+
+  // Auto-refresh every 30 seconds
+  setTimeout(() => location.reload(), 30000);
+
+  // Search filter
+  function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('.monitor-row').forEach(row => {
+      const match = row.dataset.search.includes(q);
+      const statusOk = row.style.display !== 'none' || !row.classList.contains('status-hidden');
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    document.getElementById('visibleCount').textContent = visible;
+  }
+
+  // Status filter
+  let currentStatus = 'all';
+  function filterStatus(status, btn) {
+    currentStatus = status;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    let visible = 0;
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.monitor-row').forEach(row => {
+      const matchSearch = row.dataset.search.includes(q);
+      const matchStatus = status === 'all' || row.dataset.voted === status;
+      const show = matchSearch && matchStatus;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    document.getElementById('visibleCount').textContent = visible;
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Admin Login — SWC Election{% endblock %}
+
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-icon">🔐</div>
+      <h1>Admin Login</h1>
+      <p>Restricted access — authorized personnel only</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_login') }}">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username"
+               placeholder="Admin username" required autocomplete="username" />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="password-wrap">
+          <input type="password" id="password" name="password"
+                 placeholder="Admin password" required autocomplete="current-password" />
+          <button type="button" class="password-toggle" onclick="togglePassword(this)">👁</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full">
+        🔐 Login as Admin
+      </button>
+    </form>
+
+    <p class="auth-footer-link">
+      <a href="{{ url_for('index') }}">← Student Login</a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function togglePassword(btn) {
+  const input = btn.previousElementSibling;
+  input.type = input.type === 'password' ? 'text' : 'password';
+  btn.textContent = input.type === 'password' ? '👁' : '🙈';
+}
+</script>
+{% endblock %}
